@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import com.tba.application.constants.YardModuleQueueConstants;
 import com.tba.application.domain.MoveCraneRequest;
 import com.tba.application.domain.PublisherEvent;
-import com.tba.application.servive.CraneManagerService;
+import com.tba.application.service.CraneManagerService;
 
 @Component
 public class YardModuleSubscriber {
@@ -20,7 +20,7 @@ public class YardModuleSubscriber {
 		System.out.println("evaluateYardModuleMessage :: event: " + event);
 		
 		MoveCraneRequest requestFromEvent = new MoveCraneRequest(event.getCraneId(), 
-				event.getStartPosition(), event.getEndPosition());
+				event.getStartPosition(), event.getEndPosition(), event.getIsBeingParked());
 		
 		craneManagerService.evaluateCraneMovementFromEvent(requestFromEvent, event.getCanProcessDirectly());
 		

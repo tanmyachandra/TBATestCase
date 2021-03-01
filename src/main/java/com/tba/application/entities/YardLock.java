@@ -20,14 +20,17 @@ public class YardLock {
 	
 	private Integer endPosition;
 	
+	private Boolean isBeingParked;
+
 	public YardLock() {};
 	
 	public YardLock(Long yardModuleId, Long craneId, 
-			Integer startPosition, Integer endPosition) {
+			Integer startPosition, Integer endPosition, Boolean isBeingParked) {
 		this.yardModuleId = yardModuleId;
 		this.craneId = craneId;
 		this.startPosition = startPosition;
 		this.endPosition = endPosition;
+		this.isBeingParked = isBeingParked;
 	}
 	
 	public Long getId() {
@@ -69,11 +72,19 @@ public class YardLock {
 	public void setEndPosition(Integer endPosition) {
 		this.endPosition = endPosition;
 	}
+	
+	public Boolean getIsBeingParked() {
+		return isBeingParked;
+	}
+
+	public void setIsBeingParked(Boolean isBeingParked) {
+		this.isBeingParked = isBeingParked;
+	}
 
 	@Override
 	public String toString() {
 		return "YardLock [id=" + id + ", yardModuleId=" + yardModuleId + ", craneId=" + craneId + ", startPosition="
-				+ startPosition + ", endPosition=" + endPosition + "]";
+				+ startPosition + ", endPosition=" + endPosition + ", isBeingParked=" + isBeingParked + "]";
 	}
 	
 	

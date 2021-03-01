@@ -15,15 +15,18 @@ public class PublisherEvent {
 	
 	private Boolean canProcessDirectly;
 	
+	private Boolean isBeingParked;
+
 	public PublisherEvent() {};
 	
 	public PublisherEvent(Long yardModuleId, Long craneId, 
-			Integer startPosition, Integer endPosition, Boolean canProcessDirectly) {
+			Integer startPosition, Integer endPosition, Boolean canProcessDirectly, Boolean isBeingParked) {
 		this.yardModuleId = yardModuleId;
 		this.craneId = craneId;
 		this.startPosition = startPosition;
 		this.endPosition = endPosition;
 		this.canProcessDirectly = canProcessDirectly;
+		this.isBeingParked = isBeingParked;
 	}
 
 	public Long getYardModuleId() {
@@ -45,11 +48,20 @@ public class PublisherEvent {
 	public Boolean getCanProcessDirectly() {
 		return canProcessDirectly;
 	}
+	
+	public Boolean getIsBeingParked() {
+		return isBeingParked;
+	}
+
+	public void setIsBeingParked(Boolean isBeingParked) {
+		this.isBeingParked = isBeingParked;
+	}
 
 	@Override
 	public String toString() {
 		return "PublisherEvent [yardModuleId=" + yardModuleId + ", craneId=" + craneId + ", startPosition="
-				+ startPosition + ", endPosition=" + endPosition + ", canProcessDirectly=" + canProcessDirectly + "]";
+				+ startPosition + ", endPosition=" + endPosition + ", canProcessDirectly=" + canProcessDirectly 
+				+ ", isBeingParked=" + isBeingParked + "]";
 	}
 	
 	

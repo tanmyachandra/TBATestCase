@@ -1,4 +1,4 @@
-package com.tba.application.servive;
+package com.tba.application.service;
 
 import java.util.ArrayList;
 import java.util.Date;

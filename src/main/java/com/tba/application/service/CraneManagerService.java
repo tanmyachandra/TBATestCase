@@ -1,5 +1,6 @@
-package com.tba.application.servive;
+package com.tba.application.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -63,25 +64,8 @@ public class CraneManagerService {
 		//Acquire lock
 		YardLock lock = yardLockingService.acquireYardLock(yardMappingDetails, request);
 		
-		//Process - Change yard module mappings
-		if (Objects.nonNull(lock)) {
-			
-			YardMapping yardMappingResponse = yardMappingService.processMovementOfCrane(request, yardMappingDetails);
-			if (Objects.isNull(yardMappingResponse)) {
-				return APIResponseMessages.MOVEMENT_NOT_PROCESSED;
-			}
-			
-		}
-		else {
-			System.out.println("Lock could not be acquired, hence exiting");
-			return APIResponseMessages.MOVEMENT_NOT_PROCESSED_DUE_TO_LOCK;
-		}
-		
-		//Release lock
-		Boolean isLockReleased = yardLockingService.releaseLock(lock);
-		if (!isLockReleased) {
-			System.out.println("WARNING!! Lock could not be released. Please release manually.");
-		}
+		//Change yard module mappings and Release lock would happen as part of another call
+		//that is made when the crane reaches its desired position
 		
 		return APIResponseMessages.MOVEMENT_PROCESSED;
 	}
@@ -101,12 +85,19 @@ public class CraneManagerService {
 			
 			//Evaluate the crane movement once again and proceed
 			System.out.println("Re-evaluate! ");
-			evaluateCraneMovement(request);
+			Map<Integer, Object> processSteps = new HashMap<>();
+			evaluateCraneMovement(request, processSteps);
 		}
 		
 	}
 	
-	public String parkCrane(Long craneId) {
+	/*
+	 * 
+	 * 
+	 * Don't need to check if the other crane is in the way 
+	 * As it will park always on respective sides and cranes cannot cross each other
+	 */
+	public String parkCrane(Long craneId, Map<Integer, Object> processSteps) {
 
 		//Get yard module id and current crane position
 		YardMapping yardMappingDetails = yardMappingService.getCraneMapping(craneId);
@@ -116,6 +107,7 @@ public class CraneManagerService {
 
 		//Check if crane is already parked
 		if(yardMappingDetails.getCraneParkingSlotPosition().equals(yardMappingDetails.getCraneSlotPosition())) {
+			processSteps.put(1, "No Movement");
 			return APIResponseMessages.CRANE_ALREADY_PARKED;
 		}
 
@@ -128,15 +120,20 @@ public class CraneManagerService {
 		
 		//if locked, push to queue
 		if (isAlreadyLocked) {
-			yardModuleMessagePublisher.addMoveRequestToQueue(moveCraneRequest, yardMappingDetails, false);
+			yardModuleMessagePublisher.addMoveRequestToQueue(moveCraneRequest, yardMappingDetails, false, true);
+			processSteps.put(1, "Wait for other process to finish");
+			processSteps.put(2, "Process this crane");
 			return APIResponseMessages.CRANE_MOVEMENT_QUEUED;
 		}
 		
-		return moveCrane(moveCraneRequest, yardMappingDetails);
+		//Request to park this crane
+		yardModuleMessagePublisher.addMoveRequestToQueue(moveCraneRequest, yardMappingDetails, true, true);
+		processSteps.put(1, "Process this crane");
+		return APIResponseMessages.MOVEMENT_PROCESSED;
 
 	}
 	
-	public String evaluateCraneMovement(MoveCraneRequest request) {
+	public String evaluateCraneMovement(MoveCraneRequest request, Map<Integer, Object> processSteps) {
 		
 		//Get yard module id and current crane position
 		YardMapping yardMappingDetails = yardMappingService.getCraneMapping(request.getCraneId());
@@ -146,8 +143,12 @@ public class CraneManagerService {
 		
 		//Check if the position is same
 		if (yardMappingDetails.getCraneSlotPosition().equals(request.getEndPosition())) {
+			processSteps.put(1, "No Movement");
 			return APIResponseMessages.CRANE_ALREADY_AT_DESIRED_POSITION;
 		}
+		
+		//Set the startPosition from the current mapping
+		request.setStartPosition(yardMappingDetails.getCraneSlotPosition());
 		
 		
 		//check for lock
@@ -156,7 +157,9 @@ public class CraneManagerService {
 		
 		//if locked, push to queue
 		if (isAlreadyLocked) {
-			yardModuleMessagePublisher.addMoveRequestToQueue(request, yardMappingDetails, false);
+			yardModuleMessagePublisher.addMoveRequestToQueue(request, yardMappingDetails, false, false);
+			processSteps.put(1, "Wait for other process to finish");
+			processSteps.put(2, "Process this crane");
 			return APIResponseMessages.CRANE_MOVEMENT_QUEUED;
 		}
 		
@@ -177,13 +180,54 @@ public class CraneManagerService {
 					yardMappingDetailsForSecondCrane.getCraneSlotPosition(),
 					yardMappingDetailsForSecondCrane.getCraneParkingSlotPosition());
 			
-			yardModuleMessagePublisher.addMoveRequestToQueue(secondCraneParkingRequest, yardMappingDetailsForSecondCrane, false);
-			yardModuleMessagePublisher.addMoveRequestToQueue(request, yardMappingDetails, false);
+			yardModuleMessagePublisher.addMoveRequestToQueue(secondCraneParkingRequest, yardMappingDetailsForSecondCrane, false, true);
+			yardModuleMessagePublisher.addMoveRequestToQueue(request, yardMappingDetails, false, false);
+			processSteps.put(1, "Park other crane");
+			processSteps.put(2, "Process this crane");
 			return APIResponseMessages.CRANE_MOVEMENT_QUEUED_POST_PARKING;
 		}
 		
-		return moveCrane(request, yardMappingDetails);
+		//Request to move this crane
+		yardModuleMessagePublisher.addMoveRequestToQueue(request, yardMappingDetails, true, false);
+		processSteps.put(1, "Process this crane");
+		return APIResponseMessages.MOVEMENT_PROCESSED;
 				
+	}
+	
+	/*
+	 * Service to process information when the crane reaches its desired stop
+	 * 
+	 */
+	public YardMapping positionReached(Long craneId) {
+
+		YardLock yardLockForCrane = yardLockingService.getLock(craneId);
+		if (Objects.isNull(yardLockForCrane)) {
+			System.out.println("Yard lock response could not be fetched");
+			return null;
+		}
+
+		//Get yard module id and current crane position
+		YardMapping yardMappingDetails = yardMappingService.getCraneMapping(craneId);
+		if (Objects.isNull(yardMappingDetails)) {
+			System.out.println("Yard mapping response could not be fetched");
+			return null;
+		}
+
+		MoveCraneRequest request = new MoveCraneRequest(craneId, yardLockForCrane.getEndPosition());
+		YardMapping yardMappingResponse = yardMappingService.processMovementOfCrane(request, yardMappingDetails);
+		if (Objects.isNull(yardMappingResponse)) {
+			System.out.println("Process movement could not be completed");
+			return null;
+		}
+
+		//Release lock
+		Boolean isLockReleased = yardLockingService.releaseLock(yardLockForCrane);
+		if (!isLockReleased) {
+			System.out.println("WARNING!! Lock could not be released. Please release manually.");
+		}
+
+		return yardMappingResponse;
+
 	}
 
 }

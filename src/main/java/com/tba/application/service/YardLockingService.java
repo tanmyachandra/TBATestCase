@@ -1,4 +1,4 @@
-package com.tba.application.servive;
+package com.tba.application.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,10 +32,28 @@ public class YardLockingService {
 	@Autowired
 	private YardLockRepository yardLockRepository;
 	
+	public YardLock getLock(Long craneId) {
+		
+		try {
+			List<YardLock> lockResponse = yardLockRepository.findUsingCraneId(craneId);
+			if (CollectionUtils.isNotEmpty(lockResponse)) {
+				return lockResponse.get(0);
+			}
+		}
+		catch(Exception e) {
+			System.out.println("Error while fatching lock for the crane id");
+		}
+		
+		return null;
+		
+	}
+	
 	public YardLock acquireYardLock(YardMapping yardMappingDetails, MoveCraneRequest request) {
 		
 		YardLock lock = new YardLock(yardMappingDetails.getYardModuleId(), request.getCraneId(), 
-				request.getStartPosition(), request.getEndPosition());
+				request.getStartPosition(), request.getEndPosition(), request.getIsBeingParked());
+		
+		System.out.println("lock: " + lock);
 		
 		try {
 			YardLock lockResponse = yardLockRepository.save(lock);

@@ -1,19 +1,23 @@
 package com.tba.application.helper;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import com.tba.application.constants.YardModuleConstants;
+import com.tba.application.domain.CraneMovementResponse;
 import com.tba.application.domain.InstantiateYardModuleResponse;
 import com.tba.application.domain.MoveCraneRequest;
+import com.tba.application.domain.PositionReachedResponse;
 import com.tba.application.domain.Response;
+import com.tba.application.entities.YardMapping;
 import com.tba.application.enums.ResponseStatus;
-import com.tba.application.servive.CraneManagerService;
+import com.tba.application.service.CraneManagerService;
 
 @Component
 public class CraneManagerHelper {
@@ -48,28 +52,64 @@ public class CraneManagerHelper {
 		return response;
 	}
 	
-	public Response moveCrane(Long craneId, Integer startPosition, Integer endPosition) {
+	public CraneMovementResponse moveCrane(Long craneId, Integer startPosition, Integer endPosition) {
 		
-		Response response = new Response();
-		
+		Map<Integer, Object> processSteps = new HashMap<>();		
+		CraneMovementResponse response = new CraneMovementResponse();
+				
 		MoveCraneRequest request = new MoveCraneRequest(craneId, startPosition, endPosition);
-		String responseMessage = craneManagerService.evaluateCraneMovement(request);
+		String responseMessage = craneManagerService.evaluateCraneMovement(request, processSteps);
 		
-		response.setResponseStatus(ResponseStatus.SUCCESS.getStatus());
+		if (MapUtils.isEmpty(processSteps)) {
+			response.setResponseStatus(ResponseStatus.FAILURE.getStatus());
+		}
+		else {
+			response.setResponseStatus(ResponseStatus.SUCCESS.getStatus());
+		}
+		
+		response.setProcessSteps(processSteps);
 		response.setResponseMessage(responseMessage);
 		return response;
 	}
 	
-	public Response parkCrane(Long craneId) {
+	public CraneMovementResponse parkCrane(Long craneId) {
 		
-		Response response = new Response();
+		CraneMovementResponse response = new CraneMovementResponse();
+		Map<Integer, Object> processSteps = new HashMap<>();
 		
-		String responseMessage = craneManagerService.parkCrane(craneId);
+		String responseMessage = craneManagerService.parkCrane(craneId, processSteps);
 		
-		response.setResponseStatus(ResponseStatus.SUCCESS.getStatus());
+		if (MapUtils.isEmpty(processSteps)) {
+			response.setResponseStatus(ResponseStatus.FAILURE.getStatus());
+		}
+		else {
+			response.setResponseStatus(ResponseStatus.SUCCESS.getStatus());
+		}
+		
+		response.setProcessSteps(processSteps);
 		response.setResponseMessage(responseMessage);
 		return response;
 		
+	}
+	
+	public PositionReachedResponse positionReached(Long craneId) {
+
+		PositionReachedResponse response = new PositionReachedResponse();
+		Map<Integer, Object> processSteps = new HashMap<>();
+
+		YardMapping yardMappingResponse = craneManagerService.positionReached(craneId);
+
+		if (Objects.isNull(yardMappingResponse)) {
+			response.setResponseStatus(ResponseStatus.FAILURE.getStatus());
+		}
+		else {
+			response.setResponseStatus(ResponseStatus.SUCCESS.getStatus());
+		}
+
+		response.setYardMappingResponse(yardMappingResponse);
+		response.setResponseMessage("Processed!");
+		return response;
+
 	}
 
 }

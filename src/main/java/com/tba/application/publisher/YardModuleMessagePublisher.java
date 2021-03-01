@@ -16,10 +16,10 @@ public class YardModuleMessagePublisher {
     private RabbitTemplate template;
 	
 	public void addMoveRequestToQueue(MoveCraneRequest request, 
-			YardMapping yardMappingDetails, Boolean canDirectlyBeProcessed) {
+			YardMapping yardMappingDetails, Boolean canDirectlyBeProcessed, Boolean isBeingParked) {
 
 		PublisherEvent event = new PublisherEvent(yardMappingDetails.getYardModuleId(), request.getCraneId(), 
-				request.getStartPosition(), request.getEndPosition(), canDirectlyBeProcessed);
+				request.getStartPosition(), request.getEndPosition(), canDirectlyBeProcessed, isBeingParked);
 		
 		System.out.println("addMoveRequestToQueue :: event: " + event);
 		

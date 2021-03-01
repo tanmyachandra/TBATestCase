@@ -6,7 +6,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.tba.application.domain.CraneMovementResponse;
 import com.tba.application.domain.InstantiateYardModuleResponse;
+import com.tba.application.domain.PositionReachedResponse;
 import com.tba.application.domain.Response;
 import com.tba.application.entities.Crane;
 import com.tba.application.helper.CraneManagerHelper;
@@ -44,18 +47,24 @@ public class CraneController {
 	}
 	
 	@PostMapping(path="/moveCrane")
-	public @ResponseBody Response moveCrane(
+	public @ResponseBody CraneMovementResponse moveCrane(
 			@RequestParam Long craneId,
-			@RequestParam Integer startPosition,
+			@RequestParam(required = false) Integer startPosition,
 			@RequestParam Integer endPosition) {
 		
 		return craneManagerHelper.moveCrane(craneId, startPosition, endPosition);
 	}
 	
 	@PostMapping(path="/parkCrane")
-	public @ResponseBody Response parkCrane(@RequestParam Long craneId) {
+	public @ResponseBody CraneMovementResponse parkCrane(@RequestParam Long craneId) {
 		
 		return craneManagerHelper.parkCrane(craneId);
+	}
+	
+	@PostMapping(path="/positionReached")
+	public @ResponseBody PositionReachedResponse positionReached(@RequestParam Long craneId) {
+		
+		return craneManagerHelper.positionReached(craneId);
 	}
 
 	@PostMapping(path="/add")
